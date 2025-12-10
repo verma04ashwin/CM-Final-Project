@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Patients</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Patients</h1>
+    <div id="list">Loading…</div>
+    <p><a href="/">Back</a></p>
+  </div>
+
+  <script>
+    async function load() {
+      try {
+        const resp = await fetch('/api/patients'); // we will create an API below if desired
+        if (resp.ok) {
+          const j = await resp.json();
+          const list = j.map(p => `<li><a href="/patient/${encodeURIComponent(p.patientId)}">${p.patientId}</a> — ${p.gender} — ${p.birthDate || ''}</li>`).join('');
+          document.getElementById('list').innerHTML = `<ul>${list}</ul>`;
+        } else {
+          const text = await resp.text();
+          document.getElementById('list').innerText = 'Error: ' + text;
+        }
+      } catch (err) {
+        document.getElementById('list').innerText = 'Error: ' + err;
+      }
+    }
+    load();
+  </script>
+</body>
+</html>

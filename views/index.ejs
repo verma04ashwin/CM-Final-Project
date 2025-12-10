@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>FHIR Prototype — Upload</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>FHIR Prototype — Upload CSV / Manual Predict</h1>
+
+    <section class="card">
+      <h2>Upload CSV (bulk)</h2>
+      <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".csv" required />
+        <button type="submit">Upload CSV</button>
+      </form>
+      <p>CSV columns expected: id,gender,age,hypertension,heart_disease,ever_married,work_type,Residence_type,avg_glucose_level,bmi,smoking_status,stroke</p>
+    </section>
+
+    <section class="card">
+      <h2>Manual single-patient prediction</h2>
+      <form id="manualForm" method="post" action="/predict/manual">
+        <label>Patient ID: <input name="patientId" required /></label><br/>
+        <label>Age: <input name="features[age]" type="number" /></label><br/>
+        <label>BMI: <input name="features[bmi]" type="number" /></label><br/>
+        <label>Avg Glucose: <input name="features[avg_glucose_level]" type="number" /></label><br/>
+        <button type="submit">Predict (manual)</button>
+      </form>
+      <p><a href="/patients">View Patients</a></p>
+    </section>
+  </div>
+
+  <script>
+    // simple UX: intercept manual form and call /predict/:patientId
+    document.getElementById('manualForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const patientId = form.patientId.value;
+      const formData = new FormData(form);
+      const features = {};
+      for (const [k, v] of formData.entries()) {
+        if (k.startsWith('features[')) {
+          const name = k.slice(9, -1);
+          if (v !== '') features[name] = Number(v);
+        }
+      }
+      try {
+        const res = await fetch(`/predict/${encodeURIComponent(patientId)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ features })
+        });
+        const j = await res.json();
+        if (res.ok) {
+          alert(`Predicted probability: ${j.probability} (riskId: ${j.riskId})`);
+        } else alert('Error: ' + JSON.stringify(j));
+      } catch (err) {
+        alert('Error: ' + err);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Patient Detail</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container" id="root">
+    <h1>Patient</h1>
+    <div id="content">Loading…</div>
+    <p><a href="/patients">Back to list</a></p>
+  </div>
+
+  <script>
+    async function load() {
+      const pathParts = window.location.pathname.split('/');
+      const patientId = pathParts[pathParts.length - 1];
+      try {
+        const resp = await fetch(`/api/patient/${encodeURIComponent(patientId)}`);
+        const j = await resp.json();
+        if (!resp.ok) {
+          document.getElementById('content').innerText = 'Error: ' + JSON.stringify(j);
+          return;
+        }
+        let html = `<h2>${j.patientId}</h2><p>Gender: ${j.gender}</p><p>Birth: ${j.birthDate || ''}</p>`;
+        html += '<h3>Observations</h3><ul>';
+        (j.observations||[]).forEach(o => {
+          html += `<li>${o.code && (o.code.display || o.code.text || o.code.code) } — ${o.value} ${o.unit || ''}</li>`;
+        });
+        html += '</ul>';
+        html += '<h3>Risks</h3><ul>';
+        (j.risks||[]).forEach(r => {
+          html += `<li>${r.probability} — ${r.qualitative} (method: ${r.method})</li>`;
+        });
+        html += '</ul>';
+        document.getElementById('content').innerHTML = html;
+      } catch (err) {
+        document.getElementById('content').innerText = 'Error: ' + err;
+      }
+    }
+    load();
+  </script>
+</body>
+</html>
