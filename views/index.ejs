@@ -2,61 +2,245 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>FHIR Prototype — Upload</title>
-  <link rel="stylesheet" href="/styles.css">
+  <title>FHIR R4 Prototype — Home</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .card h2 { color: #0b79d0; margin-top: 0; }
+    .result { margin-top: 16px; padding: 12px; background: #e8f5e9; border-radius: 6px; display: none; }
+    .error { background: #ffebee; color: #c62828; }
+    .info-text { color: #666; font-size: 0.9em; margin-top: 8px; }
+    label { display: block; margin-top: 12px; font-weight: 500; }
+    input[type="file"] { margin-top: 8px; }
+    .btn-secondary { background: #6c757d; margin-left: 8px; }
+  </style>
 </head>
 <body>
   <div class="container">
-    <h1>FHIR Prototype — Upload CSV / Manual Predict</h1>
+    <h1>🏥 FHIR R4 Prototype Server</h1>
+    <p>Upload CSV data or manually predict stroke risk for patients</p>
 
     <section class="card">
-      <h2>Upload CSV (bulk)</h2>
+      <h2>📤 Upload CSV (Bulk Import)</h2>
       <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
         <input type="file" name="file" accept=".csv" required />
         <button type="submit">Upload CSV</button>
       </form>
-      <p>CSV columns expected: id,gender,age,hypertension,heart_disease,ever_married,work_type,Residence_type,avg_glucose_level,bmi,smoking_status,stroke</p>
+      <p class="info-text">
+        <strong>Expected CSV columns:</strong> id, gender, age, hypertension, heart_disease, ever_married, work_type, Residence_type, avg_glucose_level, bmi, smoking_status, stroke
+      </p>
+      <div id="uploadResult" class="result"></div>
     </section>
 
     <section class="card">
-      <h2>Manual single-patient prediction</h2>
-      <form id="manualForm" method="post" action="/predict/manual">
-        <label>Patient ID: <input name="patientId" required /></label><br/>
-        <label>Age: <input name="features[age]" type="number" /></label><br/>
-        <label>BMI: <input name="features[bmi]" type="number" /></label><br/>
-        <label>Avg Glucose: <input name="features[avg_glucose_level]" type="number" /></label><br/>
-        <button type="submit">Predict (manual)</button>
+      <h2>🔮 Manual Stroke Risk Prediction</h2>
+      <form id="manualForm">
+        <h3 style="font-size: 1.1em; color: #666; margin-bottom: 8px;">Patient Information</h3>
+        
+        <label>Patient Name (Optional):
+          <input name="patientData[name]" type="text" placeholder="e.g., John Doe" />
+        </label>
+        
+        <label><span style="color: red;">*</span> Age:
+          <input name="features[age]" type="number" min="1" max="120" required placeholder="Enter age" />
+        </label>
+        
+        <label><span style="color: red;">*</span> Gender:
+          <select name="features[gender]" required>
+            <option value="">-- Select Gender --</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        
+        <h3 style="font-size: 1.1em; color: #666; margin: 16px 0 8px;">Health Measurements</h3>
+        
+        <label>BMI (kg/m²) (Optional):
+          <input name="features[bmi]" type="number" step="0.1" min="10" max="60" placeholder="e.g., 25.5" />
+        </label>
+        
+        <label>Average Glucose Level (mg/dL) (Optional):
+          <input name="features[avg_glucose_level]" type="number" step="0.1" min="50" max="300" placeholder="e.g., 120.5" />
+        </label>
+        
+        <h3 style="font-size: 1.1em; color: #666; margin: 16px 0 8px;">Medical History</h3>
+        
+        <label>Hypertension:
+          <select name="features[hypertension]">
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </label>
+        
+        <label>Heart Disease:
+          <select name="features[heart_disease]">
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </label>
+        
+        <label>Smoking Status (Optional):
+          <select name="features[smoking_status]">
+            <option value="">-- Select --</option>
+            <option value="never smoked">Never Smoked</option>
+            <option value="formerly smoked">Formerly Smoked</option>
+            <option value="regularly smoked">Regularly Smokes</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </label>
+        
+        <h3 style="font-size: 1.1em; color: #666; margin: 16px 0 8px;">Demographics (Optional)</h3>
+        
+        <label>Marital Status:
+          <select name="features[ever_married]">
+            <option value="1">Married/Divorced/Widowed</option>
+            <option value="0">Never Married</option>
+          </select>
+        </label>
+        
+        <label>Work Type:
+          <select name="features[work_type]">
+            <option value="0">Private</option>
+            <option value="1">Self-employed</option>
+            <option value="2">Government Job</option>
+            <option value="3">Children</option>
+            <option value="4">Never Worked</option>
+          </select>
+        </label>
+        
+        <label>Residence:
+          <select name="features[Residence_type]">
+            <option value="1">Urban</option>
+            <option value="0">Rural</option>
+          </select>
+        </label>
+        
+        <button type="submit" style="margin-top: 16px;">🔍 Predict Stroke Risk</button>
+        <button type="button" class="btn-secondary" onclick="document.getElementById('manualForm').reset()">Clear Form</button>
       </form>
-      <p><a href="/patients">View Patients</a></p>
+      <p class="info-text">Fill in the required fields (*). All data will be stored in the FHIR database and used for prediction.</p>
+      <div id="predictResult" class="result"></div>
+    </section>
+
+    <section class="card">
+      <h2>📋 Quick Links</h2>
+      <p>
+        <a href="/patients">👥 View All Patients</a> |
+        <a href="/fhir/metadata">📄 FHIR Capability Statement</a> |
+        <a href="/health">❤️ Health Check</a>
+      </p>
     </section>
   </div>
 
   <script>
-    // simple UX: intercept manual form and call /predict/:patientId
+    // Handle CSV upload
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const resultDiv = document.getElementById('uploadResult');
+      resultDiv.style.display = 'none';
+      
+      const formData = new FormData(e.target);
+      
+      try {
+        resultDiv.textContent = 'Uploading...';
+        resultDiv.className = 'result';
+        resultDiv.style.display = 'block';
+        
+        const res = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+          resultDiv.className = 'result';
+          resultDiv.innerHTML = `
+            <strong>✓ Success!</strong><br>
+            ${data.message || 'Upload completed'}<br>
+            <small>Patients: ${data.created?.patients || 0}, 
+            Observations: ${data.created?.observations || 0}, 
+            Conditions: ${data.created?.conditions || 0}</small>
+          `;
+          e.target.reset();
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.innerHTML = `<strong>✗ Error:</strong> ${data.error || 'Upload failed'}`;
+        }
+      } catch (err) {
+        resultDiv.className = 'result error';
+        resultDiv.innerHTML = `<strong>✗ Error:</strong> ${err.message}`;
+      }
+    });
+
+    // Handle manual prediction
     document.getElementById('manualForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const resultDiv = document.getElementById('predictResult');
+      resultDiv.style.display = 'none';
+      
       const form = e.target;
-      const patientId = form.patientId.value;
       const formData = new FormData(form);
       const features = {};
+      const patientData = {};
+      
       for (const [k, v] of formData.entries()) {
         if (k.startsWith('features[')) {
           const name = k.slice(9, -1);
-          if (v !== '') features[name] = Number(v);
+          if (v !== '') {
+            // Convert to number if it looks like a number
+            const numVal = Number(v);
+            features[name] = isNaN(numVal) ? v : numVal;
+          }
+        } else if (k.startsWith('patientData[')) {
+          const name = k.slice(12, -1);
+          if (v !== '') patientData[name] = v;
         }
       }
+      
+      // Validate required fields
+      if (!features.age || !features.gender) {
+        resultDiv.className = 'result error';
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = '<strong>✗ Error:</strong> Please fill in required fields (Age and Gender)';
+        return;
+      }
+      
       try {
-        const res = await fetch(`/predict/${encodeURIComponent(patientId)}`, {
+        resultDiv.textContent = 'Creating patient record and calculating risk...';
+        resultDiv.className = 'result';
+        resultDiv.style.display = 'block';
+        
+        const res = await fetch('/predict/manual', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ features })
+          body: JSON.stringify({ patientData, features })
         });
-        const j = await res.json();
+        
+        const data = await res.json();
+        
         if (res.ok) {
-          alert(`Predicted probability: ${j.probability} (riskId: ${j.riskId})`);
-        } else alert('Error: ' + JSON.stringify(j));
+          const probability = (data.probability * 100).toFixed(1);
+          resultDiv.className = 'result';
+          resultDiv.innerHTML = `
+            <strong>✓ Risk Assessment Complete</strong><br>
+            Patient ID: <strong>${data.patientId}</strong><br>
+            Probability: <strong>${probability}%</strong><br>
+            Risk Level: <strong style="color: ${probability >= 70 ? '#d32f2f' : probability >= 40 ? '#f57c00' : '#388e3c'}">${data.qualitativeRisk}</strong><br>
+            Risk ID: <code>${data.riskId}</code><br>
+            <small>${data.message || 'Based on ' + data.basisCount + ' clinical resource(s)'}</small><br>
+            <a href="/patient/${data.patientId}" style="margin-top: 8px; display: inline-block;">View Patient Details →</a>
+          `;
+          // Clear form after successful submission
+          setTimeout(() => form.reset(), 2000);
+        } else {
+          resultDiv.className = 'result error';
+          const diagnostic = data.issue?.[0]?.diagnostics || data.error || 'Prediction failed';
+          resultDiv.innerHTML = `<strong>✗ Error:</strong> ${diagnostic}`;
+        }
       } catch (err) {
-        alert('Error: ' + err);
+        resultDiv.className = 'result error';
+        resultDiv.innerHTML = `<strong>✗ Error:</strong> ${err.message}`;
       }
     });
   </script>
